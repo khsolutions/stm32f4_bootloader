@@ -10,7 +10,7 @@
 
 
 #define flash_addr      	0x08000000
-#define application_addr	0x80080000
+#define application_addr	0x08008000
 
 #define FLASH_KEY_1		0x45670123
 #define FLASH_KEY_2		0xCDEF89AB

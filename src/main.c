@@ -62,6 +62,7 @@ void enable_irq();
 void flash_erase();
 void flash_write(uint8_t);
 void flash_read(uint32_t);
+void code_length();
 
 void recieve();
 void printhex();
@@ -137,7 +138,7 @@ main(int argc, char* argv[])
 		break;
 
 	case 2:
-		//code_length();
+		code_length();
 		goto play;
 		break;
 
@@ -205,7 +206,6 @@ void enable_irq()
 
 void USART6_IRQHandler()
 {
-	//trace_printf("Im in Handler..\n");
 	data = priv->DR;
 	flag = 1;
 	priv->SR &= ~USART_SR_RXNE;
@@ -230,7 +230,6 @@ void flash_read(uint32_t bytes)
 	}
 
 	printdata("\nReading Sector: ");
-	//trace_printf("Sector to be Read: 0x%X\n",p);
 	printhex(p);
 	printdata("\n\n\r");
 
@@ -422,6 +421,52 @@ uint32_t getsector(int i)
 
 	return 0;
 }
+
+void code_length()
+{
+	uint32_t *p = (uint32_t *) flash_addr;
+	uint32_t len;
+
+	printdata("\n#######################################");
+
+	printdata("\nCode Length: \n");
+
+
+	printdata("\nFlash Start Base :  ");
+	printhex(flash_addr);
+
+	printdata("\nApplication Base :  ");
+	printhex(application_addr);
+
+	printdata("\n\n");
+
+
+	for(;(*p != 0xFFFFFFFF) || (*(p + 0x04) != 0xFFFFFFFF); p++);
+
+
+	printdata("Bootloader  (Bytes):  ");
+
+	len = (uint32_t)p - flash_addr;
+
+	printhex(len);
+
+
+	p = (uint32_t *) application_addr;
+
+	for(;(*p != 0xFFFFFFFF) || (*(p + 0x04) != 0xFFFFFFFF); p++);
+
+
+	printdata("\nApplication (Bytes):  ");
+
+	len = (uint32_t)p - application_addr;
+
+	printhex(len);
+
+	printdata("\n\n");
+	printdata("#######################################\n");
+
+}
+
 
 #pragma GCC diagnostic pop
 
