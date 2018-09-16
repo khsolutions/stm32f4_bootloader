@@ -32,6 +32,7 @@
 #include <stm32f4xx.h>
 #include "diag/Trace.h"
 
+#include "flash.h"
 
 // ----------------------------------------------------------------------------
 //
@@ -53,17 +54,11 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
-#define flash_addr      	0x08000000
-#define application_addr	0x80080000
-
-#define FLASH_KEY_1		0x45670123
-#define FLASH_KEY_2		0xCDEF89AB
 
 #define getbit(n,b)		((n  &  (1 << b)) >> b)
 
 void enable_irq();
 
-void code_length();
 void flash_erase();
 void flash_write(uint8_t);
 void flash_read(uint32_t);
@@ -72,6 +67,8 @@ void recieve();
 void printhex();
 void printval(int);
 void printdata(char *);
+
+uint32_t getsector(int);
 
 int data;				//Memory for storing User Input
 int flag = 0;			//Used while Taking Input Data
@@ -110,7 +107,7 @@ main(int argc, char* argv[])
 	printdata("#         Welcome To STM32F4  Bootloader          #\n");
 	printdata("###################################################\n");
 
-play:
+	play:
 
 	printdata("\nSelect one of the following Operations:\n\n");
 
@@ -140,7 +137,7 @@ play:
 		break;
 
 	case 2:
-		code_length();
+		//code_length();
 		goto play;
 		break;
 
@@ -216,28 +213,21 @@ void USART6_IRQHandler()
 
 void flash_read(uint32_t bytes)
 {
-	uint32_t mem = flash_addr;
 	uint32_t *p;
-	int k;
 
 	printdata("\nFlash :\n\r");
-sec:
+	sec:
 	printdata("\nSelect a Sector to be Read: ");
 
 	recieve();
 
-	k = data - '0';
+	p = (uint32_t *) getsector(data - '0');
 
-	if((k > 11) || (k < 0))
+	if(((data - '0') > 11) || ((data - '0') < 0))
 	{
 		printdata("Error Sector Selection..\n");
 		goto sec;
 	}
-
-	for(;k > 0; k--)
-		mem = mem +0x4000;
-
-	p = mem;
 
 	printdata("\nReading Sector: ");
 	//trace_printf("Sector to be Read: 0x%X\n",p);
@@ -274,17 +264,17 @@ void printhex(uint32_t p)
 
 	while(i++ < 8)
 	{
-		pckt = (p & 0xF0000000) >> 28;
+		*pckt = (p & 0xF0000000) >> 28;
 		p	<<= 4;
 
-		if(pckt < 10)
+		if(*pckt < 10)
 		{
-			priv->DR	=  pckt + '0';
+			priv->DR	=  *pckt + '0';
 			while(!getbit(priv->SR,6));
 		}
 		else
 		{
-			priv->DR	=  pckt + 55;
+			priv->DR	=  *pckt + 55;
 			while(!getbit(priv->SR,6));
 		}
 	}
@@ -295,7 +285,7 @@ void printhex(uint32_t p)
 void flash_erase()
 {
 
-erase:
+	erase:
 
 	printdata("\nSelect a Sector to be Erased: ");
 
@@ -341,44 +331,25 @@ erase:
 	}
 }
 
-void code_length()
-{
-	uint32_t *k = flash_addr;
-	uint32_t *p = flash_addr;
-	uint32_t *prev;
-
-	printdata("\nCode length:\n\n\r");
-
-	prev = p;
-	p++;
-
-	for(;*p != prev; p++);
-	{
-		prev = p;
-	}
-
-	//printdata("----------------------------------\n");
-	printdata("Bootloader: \n");
-	//printhex(k);
-	//printdata(" - ");
-	printhex(p-prev);
-	//printdata("----------------------------------\n");
-
-	for(p = application_addr;*p != 0xFFFFFFFF; p++);
-	//printdata("----------------------------------\n");
-	printdata("Application: ");
-	printhex(p-application_addr);
-	//printdata("----------------------------------\n");
-}
 
 void flash_write(uint8_t sector)
 {
-	uint8_t *p = 0x0800C000;
+	uint8_t *p;
 
 	fp->KEYR		=	FLASH_KEY_1;
 	fp->KEYR		=	FLASH_KEY_2;
 
-	if((sector > 11) || (sector <0))
+	fp->CR	&=	~FLASH_CR_SNB_0;
+	fp->CR	&=	~FLASH_CR_SNB_1;
+	fp->CR	&=	~FLASH_CR_SNB_2;
+	fp->CR	&=	~FLASH_CR_SNB_3;
+
+	printdata("Enter Sector to Write: ");
+	recieve();
+
+	p = (uint8_t *) getsector(data - '0');
+
+	if(((data - '0') > 11) || ((data - '0') <0))
 	{
 		printdata("Error No such Sector\n");
 		return;
@@ -393,7 +364,7 @@ void flash_write(uint8_t sector)
 	while(getbit(fp->SR,16));
 
 	fp->CR	|=	FLASH_CR_PG;
-	fp->CR	|=	(sector << 3);
+	fp->CR	|=	((data-'0') << 3);
 
 	int i = 20;
 
@@ -406,6 +377,50 @@ void flash_write(uint8_t sector)
 
 	fp->CR	|=	FLASH_CR_LOCK;
 	fp->CR	&= ~FLASH_CR_PG;
+}
+
+uint32_t getsector(int i)
+{
+	switch(i)
+	{
+		case 0:
+			return sector0;
+
+		case 1:
+			return sector1;
+
+		case 2:
+			return sector2;
+
+		case 3:
+			return sector3;
+
+		case 4:
+			return sector4;
+
+		case 5:
+			return sector5;
+
+		case 6:
+			return sector6;
+
+		case 7:
+			return sector7;
+
+		case 8:
+			return sector8;
+
+		case 9:
+			return sector9;
+
+		case 10:
+			return sector10;
+
+		case 11:
+			return sector11;
+	}
+
+	return 0;
 }
 
 #pragma GCC diagnostic pop

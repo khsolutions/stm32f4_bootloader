@@ -67,7 +67,7 @@ src/main.o: ../src/main.c ../system/include/cmsis/stm32f4xx.h \
  ../system/include/stm32f4-hal/stm32f4xx_hal_spdifrx.h \
  ../system/include/stm32f4-hal/stm32f4xx_hal_dfsdm.h \
  ../system/include/stm32f4-hal/stm32f4xx_hal_lptim.h \
- ../system/include/diag/Trace.h
+ ../system/include/diag/Trace.h ../src/flash.h
 
 ../system/include/cmsis/stm32f4xx.h:
 
@@ -210,3 +210,5 @@ src/main.o: ../src/main.c ../system/include/cmsis/stm32f4xx.h \
 ../system/include/stm32f4-hal/stm32f4xx_hal_lptim.h:
 
 ../system/include/diag/Trace.h:
+
+../src/flash.h:
